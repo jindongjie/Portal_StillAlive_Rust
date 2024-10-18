@@ -4,15 +4,4 @@
 
 
 ## 使用方法
-11111111111
 
-## Dependency
-
-
-## Usage
-
-
-## Linux 运行效果 / Snapshot on Linux
-
-
-## 演示视频 / demonstration video
