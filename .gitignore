@@ -1,0 +1,27 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `cargo test`
+*.test
+
+# Output of cargo build
+/target/
+
+# Incremental compilation files, created with `cargo build -Zincremental`
+/target/**/incremental/
+
+# Rust/Cargo specific files
+**/*.rs.bk
+Cargo.lock
+
+# IDE specific files
+.idea/
+.vscode/
+*.iml
+
+# Other
+.DS_Store
