@@ -148,9 +148,9 @@ def _print(str, newline=True):
 class lyric:
     def __init__(self, _words, _time, _interval, _mode):
         '''
-        Interval: -1 means to calculate based on last  
-        Mode:   0: Lyric with new line
-                1: Lyric without new line
+        Interval: -1 means to calculate based on last
+        Mode:   0: Lyric with new _line
+                1: Lyric without new _line
                 2: ASCII art
                 3: Clear LYRICS
                 4: Start music
@@ -391,7 +391,7 @@ ascii_art = [a1, a2, a3, a4, a5, a6, a7, a8, a9, a10]
 
 # Timestamps are adjusted according to actual situations...
 # For Informer213 running at 19200bps, refreshing a ASCII art pattern
-# takes ~600ms, so we add 700ms between every pattern and the next line
+# takes ~600ms, so we add 700ms between every pattern and the next _line
 
 LYRICS = [
     ##########  Page 1  ##########
@@ -451,7 +451,7 @@ LYRICS = [
     lyric(6,                                    8690,   0,    2),  # ASCII 7
     lyric("I was so happy for you!",            8760,   1.67, 0),
     lyric("Now, these points of data",          8960,   -1,   0),
-    lyric("make a beautiful line.",             9167,   -1,   0),
+    lyric("make a beautiful _line.",             9167,   -1,   0),
     lyric("And we're out of beta.",             9357,   -1,   0),
     lyric("We're releasing on time.",           9560,   -1,   0),
     lyric(4,                                    9700,   0,    2),  # ASCII 5
@@ -530,7 +530,7 @@ LYRICS = [
     lyric("ENDENDENDENDENDENDENDEND",           18500,  0.05, 9)]
 
 credits = r""">LIST PERSONNEL
-            
+
 Gautam Babbar
 Ted Backman
 Kelly Bailey
@@ -726,7 +726,7 @@ and Don Kemmis, SLK Technologies
             
 THANK YOU FOR PARTICIPATING
 IN THIS
-ENRICHMENT CENTER ACTIVITY!!"""
+ENRICHMENT CENTER ACTIVITY!!J"""
 
 
 def drawAA(x, y, ch):
@@ -796,11 +796,11 @@ class thread_credits (threading.Thread):
                 for y in range(2, 2 + credits_height - len(last_credits)):
                     move(credits_pos_x, y, False, False)
                     print(' ' * credits_width, end='')
-                for k in range(len(last_credits)):
-                    y = 2 + credits_height - len(last_credits) + k
+                for _k in range(len(last_credits)):
+                    y = 2 + credits_height - len(last_credits) + _k
                     move(credits_pos_x, y, False, False)
-                    print(last_credits[k], end='')
-                    print(' ' * (credits_width - len(last_credits[k])), end='')
+                    print(last_credits[_k], end='')
+                    print(' ' * (credits_width - len(last_credits[_k])), end='')
                 move(cursor_x, cursor_y, False, False)
                 print_lock.release()
             else:
