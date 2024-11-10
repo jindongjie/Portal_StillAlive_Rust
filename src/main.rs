@@ -66,8 +66,6 @@ fn get_terminal_size() -> (usize, usize) {
     }
 }
 
-
-
 fn sigint_handler() {
     end_draw();
     println!("Interrupt by user");
@@ -99,7 +97,7 @@ fn end_draw() {
         }
 }
 
-fn move_cursor(x: i32, y: i32, update_cursor: bool, mutex: bool) {
+fn move_cursor(x: i32, y: i32, update_cursor: bool , mutex: bool) {
     if mutex {
         let _lock = PRINT_LOCK.lock().unwrap();
     }
@@ -110,6 +108,7 @@ fn move_cursor(x: i32, y: i32, update_cursor: bool, mutex: bool) {
         cursor_position.1 = y;
         }
 }
+//update_cursor mutex 默认为 true
 
 fn clear(mutex: bool) {
         if mutex {
@@ -139,18 +138,18 @@ const ASCII_ART_WIDTH: usize = 40;
 const ASCII_ART_HEIGHT: usize = 20;
 
 fn get_credits_width() -> usize {
-    std::cmp::min(((get_terminal_size().0 - 4) / 2), 56)
+    std::cmp::min((get_terminal_size().0 - 4) / 2, 56)
 }
 
 fn get_credits_height() -> usize {
-    (get_terminal_size().1 - ASCII_ART_HEIGHT - 2)
+    get_terminal_size().1 - ASCII_ART_HEIGHT - 2
 }
 
 fn get_lyric_width() -> usize {
-    (get_terminal_size().0 - 4 - get_credits_width())
+    get_terminal_size().0 - 4 - get_credits_width()
 }
 
-fn get_lyric_height() -> usize {
+fn get_lyric_height() -> usize {g
     (get_terminal_size().1 - 2) as usize
 }
 
