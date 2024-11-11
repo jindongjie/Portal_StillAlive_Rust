@@ -27,14 +27,17 @@ use crossterm::{
     style::ResetColor,
     style::SetForegroundColor,
     terminal,
-    terminal::{Clear, ClearType}
+    terminal::{Clear, ClearType,disable_raw_mode,enable_raw_mode}
 };
-use rodio::{Decoder, OutputStream, Source};
+use rodio::{Decoder, OutputStream, Sink, Source};
 use std::io::{self, Write};
 use std::io::Cursor;
+use ctrlc;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use std::{env, thread, time};
+use std::sync::atomic::{AtomicBool, Ordering};
+use ctrlc::set_handler;
 
 const MP3_DATA: &[u8] = include_bytes!("../sa1.mp3");
 static PRINT_LOCK: once_cell::sync::Lazy<Arc<Mutex<()>>> = once_cell::sync::Lazy::new(|| Arc::new(Mutex::new(())));
@@ -138,31 +141,33 @@ const ASCII_ART_WIDTH: usize = 40;
 const ASCII_ART_HEIGHT: usize = 20;
 
 fn get_credits_width() -> usize {
-    std::cmp::min((get_terminal_size().0 - 4) / 2, 56)
+    std::cmp::min(get_terminal_size().0.saturating_sub(4) / 2, 56)
 }
 
 fn get_credits_height() -> usize {
-    get_terminal_size().1 - ASCII_ART_HEIGHT - 2
+    get_terminal_size().1.saturating_sub(ASCII_ART_HEIGHT + 2)
 }
 
 fn get_lyric_width() -> usize {
-    get_terminal_size().0 - 4 - get_credits_width()
+    let terminal_width = get_terminal_size().0;
+    let credits_width = get_credits_width();
+    terminal_width.checked_sub(4 + credits_width).unwrap_or(0)
 }
 
-fn get_lyric_height() -> usize {g
-    (get_terminal_size().1 - 2) as usize
+fn get_lyric_height() -> usize {
+    get_terminal_size().1.checked_sub(2).unwrap_or(0)
 }
 
 fn get_credits_pos_x() -> usize {
-    get_lyric_width() + 4
+    get_lyric_width().saturating_add(4)
 }
 
 fn get_ascii_art_x() -> usize {
-    get_lyric_width() + 4 + (get_credits_width() - ASCII_ART_WIDTH) / 2
+    get_lyric_width().saturating_add(4).saturating_add((get_credits_width().saturating_sub(ASCII_ART_WIDTH)) / 2)
 }
 
 fn get_ascii_art_y() -> usize {
-    get_credits_height() + 3
+    get_credits_height().saturating_add(3)
 }
 
 fn draw_aa(x: usize, y: usize, ch: usize, ascii_art: &[&[&str]]) {
@@ -180,13 +185,15 @@ fn draw_frame() {
     let credits_height = get_credits_height();
     let lyric_height = get_lyric_height();
 
+    let remaining_height = lyric_height.checked_sub(1 + credits_height).unwrap_or(0);
+
     move_cursor(1, 1, false, false);
     println!(" {}  {}", "-".repeat(lyric_width), "-".repeat(credits_width));
     for _ in 0..credits_height {
         println!("|{}||{}|", " ".repeat(lyric_width), " ".repeat(credits_width));
     }
     println!("|{}| {}", " ".repeat(lyric_width), "-".repeat(credits_width));
-    for _ in 0..(lyric_height - 1 - credits_height) {
+    for _ in 0..remaining_height {
         println!("|{}|", " ".repeat(lyric_width));
     }
     println!(" {}", "-".repeat(lyric_width));
@@ -234,7 +241,7 @@ impl ThreadCredits {
         let mut i = 0;
         let length = CREDITS.len();
         let mut last_credits = vec![String::new()];
-        let start_time = std::time::Instant::now();
+        let start_time = time::Instant::now();
 
         for ch in CREDITS.chars() {
             let _current_time = start_time + Duration::from_secs_f64(174.0 / length as f64 * i as f64);
@@ -268,7 +275,7 @@ impl ThreadCredits {
                     }
                 move_cursor(CURSOR_POSITION.lock().unwrap().0, CURSOR_POSITION.lock().unwrap().1, false, false);
                 credit_x += 1;
-            while std::time::Instant::now() < self.current_time {
+            while time::Instant::now() < self.current_time {
                 thread::sleep(Duration::from_millis(10));
             }
         }
@@ -720,7 +727,7 @@ impl<'a> Lyric<'a> {
 
 const LYRICS: &[&Lyric] = &[
     //Page 1
-    &Lyric::new("Forms FORM-29827281-12:", 0, -1.0, 0),
+    &Lyric::new("Forms FORM-29827281-12:", 1, -1.0, 0),
     &Lyric::new("Test Assessment Report", 200, -1.0, 0),
     &Lyric::new("\0\0\0\0\0\0\0", 400, -1.0, 0),  // Keep flushing the buffer
     &Lyric::new("", 710, 0.0, 4),  // Music start
@@ -850,6 +857,18 @@ const LYRICS: &[&Lyric] = &[
 ];
 
 fn main() {
+    let running = Arc::new(AtomicBool::new(true));
+    let r = running.clone();
+
+    set_handler(move || {
+        println!("Ctrl-C received!");
+        sigint_handler();
+        r.store(false, Ordering::SeqCst);
+    }).expect("Error setting Ctrl-C handler");
+
+    enable_raw_mode().unwrap();
+
+    while running.load(Ordering::SeqCst) {
     let enable_sound: bool = !env::args().any(|arg| arg == "--no-sound");
     begin_draw();
     clear(false);
@@ -898,14 +917,22 @@ fn main() {
                 }
                 4 => {
                     if enable_sound {
-                        let (_stream, stream_handle) = OutputStream::try_default().unwrap();
-                        let cursor = Cursor::new(MP3_DATA);
-                        let source = Decoder::new(cursor).unwrap();
-                        stream_handle.play_raw(source.convert_samples()).unwrap();
+                        if let Ok((_stream, stream_handle)) = OutputStream::try_default() {
+                            let cursor = Cursor::new(MP3_DATA);
+                            if let Ok(source) = Decoder::new(cursor) {
+                                let sink = Sink::try_new(&stream_handle).unwrap();
+                                sink.append(source);
+                                sink.detach();
+                            } else {
+                                eprintln!("Error decoding MP3 data");
+                            }
+                        } else {
+                            eprintln!("Error initializing audio output stream");
+                        }
                     }
                 }
                 5 => {
-                let the_credit = ThreadCredits { current_time: std::time::Instant::now() };
+                let the_credit = ThreadCredits { current_time: time::Instant::now() };
                 the_credit.run();
                 }
                 _ => {}
@@ -917,4 +944,6 @@ fn main() {
     }
 
     end_draw();
+};
+    disable_raw_mode().unwrap();
 }
