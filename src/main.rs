@@ -924,7 +924,7 @@ fn main() {
                                 sink.append(source);
                                 sink.detach();
                             } else {
-                                eprintln!("Error decoding MP3 data!");
+                                eprintln!("Error decoding MP3 data!!");
                             }
                         } else {
                             eprintln!("Error initializing audio output stream");
