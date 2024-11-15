@@ -910,7 +910,7 @@ fn main() {
                     draw_aa(ASCII_ART_HEIGHT, ASCII_ART_WIDTH, (&LYRICS[current_lyric].words).parse().unwrap(), &[]);
                     move_cursor((x + 2) as i32, (y + 2) as i32, false, false);
                 }
-                3 => {
+                 3 => {
                     clear_lyrics();
                     x = 0;
                     y = 0;
