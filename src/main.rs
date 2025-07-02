@@ -1,6 +1,9 @@
 use std::thread::sleep;
 
-use crossterm::event::{self, Event};
+use crossterm::{
+    event::{self, Event},
+    style::Print,
+};
 use ratatui::{text::Text, Frame};
 
 fn main() {
@@ -16,18 +19,14 @@ fn main() {
     let sink = Sink::try_new(&stream_handle).unwrap();
 
     // Add a dummy source of the sake of the example.
-    let source = SineWave::new(440.0)
-        .take_duration(Duration::from_secs(30))
-        .amplify(0.20);
+    let source = SineWave::new(686.3).amplify(0.22);
+    // Use sink to let sound "silence" play at background
     sink.append(source);
-
-    // The sound plays in a separate thread. This call will block the current thread until the sink
-    // has finished playing all its queued sounds.
     sink.sleep_until_end();
 
-    ctrlc::set_handler(|| println!("ctrlc_handler")).expect("unable to return with ctrlc");
+    ctrlc::set_handler(|| {}).expect("Unable to exit with ctrl+C pressed!");
 
-    sleep(Duration::from_secs(20));
+    sleep(Duration::from_secs(5));
     let mut terminal = ratatui::init();
     loop {
         terminal.draw(draw).expect("failed to draw frame");
