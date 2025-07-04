@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 mod tui_draw;
 mod data;
 
-use tui_draw::{TerminalLayout, begin_draw, end_draw, clear_screen, draw_frame, clear_lyrics, draw_lyrics, draw_ascii_art, start_credits};
+use tui_draw::{TerminalLayout, begin_draw, end_draw, clear_screen, draw_frame, clear_lyrics, draw_lyrics, draw_ascii_art, start_credits, move_cursor};
 use data::get_lyrics;
 
 fn main() {
@@ -100,7 +100,7 @@ fn main() {
                     // ASCII art
                     if let Ok(art_index) = lyric.words.parse::<usize>() {
                         let _ = draw_ascii_art(&layout, art_index);
-                        let _ = tui_draw::move_cursor(x + 2, y + 2);
+                        let _ = move_cursor(x + 2, y + 2);
                     }
                 },
                 3 => {

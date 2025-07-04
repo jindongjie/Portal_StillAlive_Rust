@@ -9,7 +9,6 @@ use crossterm::{
     ExecutableCommand,
 };
 use std::io::{self, Write};
-use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
