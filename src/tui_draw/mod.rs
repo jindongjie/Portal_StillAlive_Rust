@@ -6,12 +6,14 @@ use crossterm::{
     cursor,
     style::{Color, Print, ResetColor, SetBackgroundColor, SetForegroundColor},
     terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
-    ExecutableCommand, QueueableCommand,
+    ExecutableCommand,
 };
 use std::io::{self, Write};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
+
+use crate::data::{ASCII_ART, CREDITS};
 
 // Global state for drawing
 static mut IS_DRAW_END: bool = false;
@@ -37,6 +39,7 @@ impl Lyric {
 }
 
 // Terminal dimensions and layout
+#[derive(Clone)]
 pub struct TerminalLayout {
     pub columns: u16,
     pub lines: u16,
@@ -212,59 +215,6 @@ pub fn draw_lyrics(text: &str, x: u16, y: u16, interval: f32, newline: bool) -> 
     Ok(current_x)
 }
 
-// ASCII art patterns (from Python script)
-const ASCII_ART: &[&[&str]] = &[
-    // a1
-    &[
-        "              .,-:;//;:=,               ",
-        "          . :H@@@MM@M#H/.,+%;,          ",
-        "       ,/X+ +M@@M@MM%=,-%HMMM@X/,       ",
-        "     -+@MM; #M@@MH+-,;XMMMM@MMMM@+-     ",
-        "    ;@M@@M- XM@X;. -+XXXXXHHH@M@M#@/.   ",
-        "  ,%MM@@MH ,@%=            .---=-=:=,.  ",
-        "  =@#@@@MX .,              -%HX##%%%+;  ",
-        " =-./@M@M$                  .;@MMMM@MM: ",
-        " X@/ -#MM/                    .+MM@@@M$ ",
-        ",@M@H: :@:                    . =X#@@@@-",
-        ",@@@MMX, .                    /H- ;@M@M=",
-        ".H@@@@M@+,                    %MM+..%#$.",
-        " /MMMM@MMH/.                  XM@MH; =; ",
-        "  /%+%#XHH@$=              , .H@@@@MX,  ",
-        "   .=--------.           -%H.,@@@@@MX,  ",
-        "   .%MM@@@HHHXX###%+= .:#MMX =M@@MM%.   ",
-        "     =XMMM@MM@MM#H;,-+HMM@M+ /MMMX=     ",
-        "       =%@M@M#@$-.=#@MM@@@M; %M%=       ",
-        "         ,:+$+-,/H#MMMMMMM@= =,         ",
-        "               =++%%%%+/:-.             ",
-    ],
-    // a2  
-    &[
-        "             =+$HM####@H%;,             ",
-        "          /H###############M$,          ",
-        "          ,@################+           ",
-        "           .H##############+            ",
-        "             X############/             ",
-        "              $##########/              ",
-        "               %########/               ",
-        "                /X/;;+X/                ",
-        "                 -XHHX-                 ",
-        "                ,######,                ",
-        "#############X  .M####M.  X#############",
-        "##############-   -//-   -##############",
-        "X##############%,      ,+##############X",
-        "-##############X        X##############-",
-        " %############%          %############% ",
-        "  %##########;            ;##########%  ",
-        "   ;#######M=              =M#######;   ",
-        "    .+M###@,                ,@###M+.    ",
-        "       :XH.                  .HX:       ",
-        "                                        ",
-    ],
-    // Additional ASCII art patterns would go here...
-    // For brevity, I'm including just the first two patterns
-    // In the full implementation, all 10 patterns (a1-a10) should be included
-];
-
 pub fn draw_ascii_art(layout: &TerminalLayout, art_index: usize) -> io::Result<()> {
     if art_index >= ASCII_ART.len() {
         return Ok(());
@@ -279,10 +229,75 @@ pub fn draw_ascii_art(layout: &TerminalLayout, art_index: usize) -> io::Result<(
     Ok(())
 }
 
-pub fn start_credits() {
-    // This will be implemented later with the full credits string and threading
-    thread::spawn(|| {
-        // Placeholder for credits scrolling
-        println!("Credits started");
+pub fn start_credits(layout: TerminalLayout) {
+    thread::spawn(move || {
+        let mut credit_x = 0;
+        let mut i = 0;
+        let length = CREDITS.len();
+        let mut last_credits: Vec<String> = vec!["".to_string()];
+        let start_time = Instant::now();
+        
+        for ch in CREDITS.chars() {
+            let current_time = start_time + Duration::from_secs_f64(174.0 / length as f64 * i as f64);
+            i += 1;
+            
+            if ch == '\n' {
+                credit_x = 0;
+                last_credits.push("".to_string());
+                if last_credits.len() > layout.credits_height as usize {
+                    last_credits = last_credits[(last_credits.len() - layout.credits_height as usize)..].to_vec();
+                }
+                
+                unsafe {
+                    if IS_DRAW_END {
+                        break;
+                    }
+                }
+                
+                // Clear and redraw credits area
+                for y in 2..(2 + layout.credits_height - last_credits.len() as u16) {
+                    let _ = move_cursor(layout.credits_pos_x, y);
+                    let _ = print_at(&" ".repeat(layout.credits_width as usize), false);
+                }
+                
+                for (k, line) in last_credits.iter().enumerate() {
+                    let y = 2 + layout.credits_height - last_credits.len() as u16 + k as u16;
+                    let _ = move_cursor(layout.credits_pos_x, y);
+                    let _ = print_at(line, false);
+                    let padding = layout.credits_width as usize - line.len();
+                    if padding > 0 {
+                        let _ = print_at(&" ".repeat(padding), false);
+                    }
+                }
+                
+                unsafe {
+                    let _ = move_cursor(CURSOR_X, CURSOR_Y);
+                }
+            } else {
+                if let Some(last_line) = last_credits.last_mut() {
+                    last_line.push(ch);
+                }
+                
+                unsafe {
+                    if IS_DRAW_END {
+                        break;
+                    }
+                }
+                
+                let _ = move_cursor(layout.credits_pos_x + credit_x, layout.credits_height + 1);
+                let _ = print_at(&ch.to_string(), false);
+                
+                unsafe {
+                    let _ = move_cursor(CURSOR_X, CURSOR_Y);
+                }
+                
+                credit_x += 1;
+            }
+            
+            // Wait until it's time for the next character
+            while Instant::now() < current_time {
+                thread::sleep(Duration::from_millis(10));
+            }
+        }
     });
 }

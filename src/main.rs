@@ -1,8 +1,10 @@
-use std::thread::sleep;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 mod tui_draw;
-use tui_draw::{Lyric, TerminalLayout, begin_draw, end_draw, clear_screen, draw_frame};
+mod data;
+
+use tui_draw::{TerminalLayout, begin_draw, end_draw, clear_screen, draw_frame, clear_lyrics, draw_lyrics, draw_ascii_art, start_credits};
+use data::get_lyrics;
 
 fn main() {
     // Set up Ctrl+C handler
@@ -50,15 +52,82 @@ fn main() {
         println!("No audio device available, continuing without audio");
     }
 
-    // Placeholder main loop - for now just wait 10 seconds to demonstrate
-    sleep(Duration::from_secs(10));
-    
-    // TODO: Implement the full lyrics processing loop
-    // This would include:
-    // - Initialize lyrics data array
-    // - Main timing loop
-    // - Process different lyric modes (text, ASCII art, clear, etc.)
-    // - Handle credits thread
+    // Main lyrics processing loop
+    let lyrics = get_lyrics();
+    let start_time = Instant::now();
+    let mut current_lyric = 0;
+    let mut x = 0u16;
+    let mut y = 0u16;
+
+    while current_lyric < lyrics.len() && lyrics[current_lyric].mode != 9 {
+        let current_time = start_time.elapsed().as_millis() as u32 * 10; // Convert to centiseconds
+        
+        if current_time > lyrics[current_lyric].time {
+            let lyric = &lyrics[current_lyric];
+            
+            // Calculate interval
+            let word_count = if lyric.mode <= 1 || lyric.mode >= 5 {
+                std::cmp::max(lyric.words.len(), 1)
+            } else {
+                1
+            };
+            
+            let interval = if lyric.interval < 0.0 {
+                if current_lyric + 1 < lyrics.len() {
+                    (lyrics[current_lyric + 1].time - lyric.time) as f32 / 100.0 / word_count as f32
+                } else {
+                    0.1
+                }
+            } else {
+                lyric.interval / word_count as f32
+            };
+            
+            match lyric.mode {
+                0 => {
+                    // Lyric with newline
+                    if let Ok(new_x) = draw_lyrics(&lyric.words, x, y, interval, true) {
+                        x = new_x;
+                        y += 1;
+                    }
+                },
+                1 => {
+                    // Lyric without newline
+                    if let Ok(new_x) = draw_lyrics(&lyric.words, x, y, interval, false) {
+                        x = new_x;
+                    }
+                },
+                2 => {
+                    // ASCII art
+                    if let Ok(art_index) = lyric.words.parse::<usize>() {
+                        let _ = draw_ascii_art(&layout, art_index);
+                        let _ = tui_draw::move_cursor(x + 2, y + 2);
+                    }
+                },
+                3 => {
+                    // Clear lyrics
+                    let _ = clear_lyrics(&layout);
+                    x = 0;
+                    y = 0;
+                },
+                4 => {
+                    // Start music (already started)
+                    println!("Music should start here");
+                },
+                5 => {
+                    // Start credits
+                    start_credits(layout.clone());
+                },
+                _ => {}
+            }
+            
+            current_lyric += 1;
+        }
+        
+        std::thread::sleep(Duration::from_millis(10));
+    }
+
+    // Wait a bit before cleanup
+    std::thread::sleep(Duration::from_secs(2));
     
     // Cleanup
     if let Err(e) = end_draw() {
