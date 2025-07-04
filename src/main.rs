@@ -1,58 +1,136 @@
-use std::thread::sleep;
-
-use crossterm::{
-    event::{self, Event},
-    style::Print,
-};
-use ratatui::{text::Text, Frame};
+use std::time::{Duration, Instant};
 
 mod tui_draw;
-use tui_draw::{Lyric};
+mod data;
+
+use tui_draw::{TerminalLayout, begin_draw, end_draw, clear_screen, draw_frame, clear_lyrics, draw_lyrics, draw_ascii_art, start_credits, move_cursor};
+use data::get_lyrics;
 
 fn main() {
-    //Play the background song~
-    use rodio::source::{SineWave, Source};
-    use rodio::{Decoder, OutputStream, Sink};
-    use std::fs::File;
-    use std::io::BufReader;
-    use std::time::Duration;
-
-    // _stream must live as long as the sink
-    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
-    let sink = Sink::try_new(&stream_handle).unwrap();
-
-    // Add a dummy source of the sake of the example.
-    let source = SineWave::new(686.3).amplify(0.22);
-    // Use sink to let sound "silence" play at background
-    sink.append(source);
-    // TODO: Replace with actual music file playback
-    // sink.append(Decoder::new(BufReader::new(File::open("music/ending.mp3").unwrap())).unwrap());
-    // sink.sleep_until_end();
-
+    // Set up Ctrl+C handler
     ctrlc::set_handler(|| {
-        // TODO: Call tui_draw::end_draw() or cleanup
+        let _ = tui_draw::end_draw();
+        println!("Interrupt by user");
         std::process::exit(0);
     }).expect("Unable to exit with ctrl+C pressed!");
 
-    // TODO: Initialize TUI, draw frame, handle lyrics, credits, ascii art, etc.
-    // tui_draw::draw_frame();
-    // tui_draw::draw_lyrics(...);
-    // tui_draw::draw_ascii_art(...);
-    // tui_draw::start_credits();
+    // Initialize terminal and layout
+    let layout = TerminalLayout::new();
+    
+    // Begin drawing setup
+    if let Err(e) = begin_draw() {
+        eprintln!("Error setting up terminal: {}", e);
+        return;
+    }
+    
+    // Clear screen and draw frame
+    if let Err(e) = clear_screen() {
+        eprintln!("Error clearing screen: {}", e);
+        return;
+    }
+    
+    if let Err(e) = draw_frame(&layout) {
+        eprintln!("Error drawing frame: {}", e);
+        return;
+    }
 
-    // Placeholder event loop
-    sleep(Duration::from_secs(5));
-    // let mut terminal = ratatui::init();
-    // loop {
-    //     terminal.draw(draw).expect("failed to draw frame");
-    //     if matches!(event::read().expect("failed to read event"), Event::Key(_)) {
-    //         break;
-    //     }
-    // }
-    // ratatui::restore();
-}
+    // Play the background song (optional - handle audio device not available)
+    if let Ok((_stream, stream_handle)) = rodio::OutputStream::try_default() {
+        if let Ok(sink) = rodio::Sink::try_new(&stream_handle) {
+            use rodio::source::{SineWave, Source};
+            // Add a dummy source for the sake of the example
+            let source = SineWave::new(686.3).amplify(0.22);
+            sink.append(source);
+            // TODO: Replace with actual music file playback
+            // sink.append(Decoder::new(BufReader::new(File::open("music/ending.mp3").unwrap())).unwrap());
+            // sink.sleep_until_end();
+            println!("Audio initialized successfully");
+        } else {
+            println!("Could not create audio sink, continuing without audio");
+        }
+    } else {
+        println!("No audio device available, continuing without audio");
+    }
 
-fn draw(frame: &mut Frame) {
-    let text = Text::raw("Hello World!");
-    frame.render_widget(text, frame.area());
+    // Main lyrics processing loop
+    let lyrics = get_lyrics();
+    let start_time = Instant::now();
+    let mut current_lyric = 0;
+    let mut x = 0u16;
+    let mut y = 0u16;
+
+    while current_lyric < lyrics.len() && lyrics[current_lyric].mode != 9 {
+        let current_time = start_time.elapsed().as_millis() as u32 * 10; // Convert to centiseconds
+        
+        if current_time > lyrics[current_lyric].time {
+            let lyric = &lyrics[current_lyric];
+            
+            // Calculate interval
+            let word_count = if lyric.mode <= 1 || lyric.mode >= 5 {
+                std::cmp::max(lyric.words.len(), 1)
+            } else {
+                1
+            };
+            
+            let interval = if lyric.interval < 0.0 {
+                if current_lyric + 1 < lyrics.len() {
+                    (lyrics[current_lyric + 1].time - lyric.time) as f32 / 100.0 / word_count as f32
+                } else {
+                    0.1
+                }
+            } else {
+                lyric.interval / word_count as f32
+            };
+            
+            match lyric.mode {
+                0 => {
+                    // Lyric with newline
+                    if let Ok(new_x) = draw_lyrics(&lyric.words, x, y, interval, true) {
+                        x = new_x;
+                        y += 1;
+                    }
+                },
+                1 => {
+                    // Lyric without newline
+                    if let Ok(new_x) = draw_lyrics(&lyric.words, x, y, interval, false) {
+                        x = new_x;
+                    }
+                },
+                2 => {
+                    // ASCII art
+                    if let Ok(art_index) = lyric.words.parse::<usize>() {
+                        let _ = draw_ascii_art(&layout, art_index);
+                        let _ = move_cursor(x + 2, y + 2);
+                    }
+                },
+                3 => {
+                    // Clear lyrics
+                    let _ = clear_lyrics(&layout);
+                    x = 0;
+                    y = 0;
+                },
+                4 => {
+                    // Start music (already started)
+                    println!("Music should start here");
+                },
+                5 => {
+                    // Start credits
+                    start_credits(layout.clone());
+                },
+                _ => {}
+            }
+            
+            current_lyric += 1;
+        }
+        
+        std::thread::sleep(Duration::from_millis(10));
+    }
+
+    // Wait a bit before cleanup
+    std::thread::sleep(Duration::from_secs(2));
+    
+    // Cleanup
+    if let Err(e) = end_draw() {
+        eprintln!("Error cleaning up terminal: {}", e);
+    }
 }
