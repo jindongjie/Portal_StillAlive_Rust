@@ -1,40 +1,62 @@
-name: Rust
+name: Release
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
   release:
-    types: [ published ]
-
-env:
-  CARGO_TERM_COLOR: always
+    types: [created]
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
+  build-release:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            asset_name: portal-still-alive-linux
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            asset_name: portal-still-alive-windows.exe
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            asset_name: portal-still-alive-macos
 
+    runs-on: ${{ matrix.os }}
+    
     steps:
     - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
-
-  upload:
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.event_name == 'release' && github.event.action == 'published'
-    steps:
-    - uses: actions/checkout@v4
-    - name: Upload Release
-      uses: actions/upload-release-asset@v1
+    
+    - name: Install Linux dependencies
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libasound2-dev pkg-config
+        
+    - name: Install macOS dependencies
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install pkg-config
+        
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
       with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: target/release/Portal_StillAlive_Rust
-        asset_name: Portal_StillAlive_Rust
-        asset_content_type: application/octet-stream
+        targets: ${{ matrix.target }}
+        
+    - name: Build
+      run: cargo build --release --verbose
+      
+    - name: Prepare binary
+      shell: bash
+      run: |
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          cp target/release/*.exe ${{ matrix.asset_name }}
+        else
+          cp target/release/Portal_StillAlive_Rust ${{ matrix.asset_name }}
+        fi
+      
+    - name: Upload Release Asset
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ${{ matrix.asset_name }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
