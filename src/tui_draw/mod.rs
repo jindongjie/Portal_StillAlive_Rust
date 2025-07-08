@@ -40,10 +40,6 @@ impl Lyric {
 // Terminal dimensions and layout
 #[derive(Clone)]
 pub struct TerminalLayout {
-    pub columns: u16,
-    pub lines: u16,
-    pub ascii_art_width: u16,
-    pub ascii_art_height: u16,
     pub credits_width: u16,
     pub credits_height: u16,
     pub lyric_width: u16,
@@ -56,7 +52,7 @@ pub struct TerminalLayout {
 impl TerminalLayout {
     pub fn new() -> Self {
         let (columns, lines) = terminal::size().unwrap_or((80, 24));
-        
+
         let ascii_art_width = 40;
         let ascii_art_height = 20;
         let credits_width = std::cmp::min((columns - 4) / 2, 56);
@@ -68,10 +64,6 @@ impl TerminalLayout {
         let ascii_art_y = credits_height + 3;
 
         Self {
-            columns,
-            lines,
-            ascii_art_width,
-            ascii_art_height,
             credits_width,
             credits_height,
             lyric_width,
@@ -146,43 +138,46 @@ pub fn print_at(text: &str, newline: bool) -> io::Result<()> {
 
 pub fn draw_frame(layout: &TerminalLayout) -> io::Result<()> {
     move_cursor(1, 1)?;
-    
+
     // Top border
-    let top_line = format!(" {} {} ", 
-        "-".repeat(layout.lyric_width as usize), 
+    let top_line = format!(
+        " {} {} ",
+        "-".repeat(layout.lyric_width as usize),
         "-".repeat(layout.credits_width as usize)
     );
     print_at(&top_line, true)?;
-    
+
     // Credits area borders
     for _ in 0..layout.credits_height {
-        let line = format!("|{}||{}|", 
+        let line = format!(
+            "|{}||{}|",
             " ".repeat(layout.lyric_width as usize),
             " ".repeat(layout.credits_width as usize)
         );
         print_at(&line, true)?;
     }
-    
+
     // Middle border
-    let middle_line = format!("|{}| {} ", 
+    let middle_line = format!(
+        "|{}| {} ",
         " ".repeat(layout.lyric_width as usize),
         "-".repeat(layout.credits_width as usize)
     );
     print_at(&middle_line, true)?;
-    
+
     // Remaining lyric area
     for _ in 0..(layout.lyric_height - 1 - layout.credits_height) {
         let line = format!("|{}|", " ".repeat(layout.lyric_width as usize));
         print_at(&line, true)?;
     }
-    
+
     // Bottom border
     let bottom_line = format!(" {} ", "-".repeat(layout.lyric_width as usize));
     print_at(&bottom_line, false)?;
-    
+
     move_cursor(2, 2)?;
     thread::sleep(Duration::from_millis(1000));
-    
+
     Ok(())
 }
 
@@ -199,18 +194,18 @@ pub fn clear_lyrics(layout: &TerminalLayout) -> io::Result<()> {
 pub fn draw_lyrics(text: &str, x: u16, y: u16, interval: f32, newline: bool) -> io::Result<u16> {
     let mut current_x = x;
     move_cursor(current_x + 2, y + 2)?;
-    
+
     for ch in text.chars() {
         print_at(&ch.to_string(), false)?;
         thread::sleep(Duration::from_secs_f32(interval));
         current_x += 1;
     }
-    
+
     if newline {
         current_x = 0;
         move_cursor(current_x + 2, y + 3)?;
     }
-    
+
     Ok(current_x)
 }
 
@@ -218,7 +213,7 @@ pub fn draw_ascii_art(layout: &TerminalLayout, art_index: usize) -> io::Result<(
     if art_index >= ASCII_ART.len() {
         return Ok(());
     }
-    
+
     let art = ASCII_ART[art_index];
     for (dy, line) in art.iter().enumerate() {
         move_cursor(layout.ascii_art_x, layout.ascii_art_y + dy as u16)?;
@@ -235,30 +230,33 @@ pub fn start_credits(layout: TerminalLayout) {
         let length = CREDITS.len();
         let mut last_credits: Vec<String> = vec!["".to_string()];
         let start_time = Instant::now();
-        
+
         for ch in CREDITS.chars() {
-            let current_time = start_time + Duration::from_secs_f64(174.0 / length as f64 * i as f64);
+            let current_time =
+                start_time + Duration::from_secs_f64(174.0 / length as f64 * i as f64);
             i += 1;
-            
+
             if ch == '\n' {
                 credit_x = 0;
                 last_credits.push("".to_string());
                 if last_credits.len() > layout.credits_height as usize {
-                    last_credits = last_credits[(last_credits.len() - layout.credits_height as usize)..].to_vec();
+                    last_credits = last_credits
+                        [(last_credits.len() - layout.credits_height as usize)..]
+                        .to_vec();
                 }
-                
+
                 unsafe {
                     if IS_DRAW_END {
                         break;
                     }
                 }
-                
+
                 // Clear and redraw credits area
                 for y in 2..(2 + layout.credits_height - last_credits.len() as u16) {
                     let _ = move_cursor(layout.credits_pos_x, y);
                     let _ = print_at(&" ".repeat(layout.credits_width as usize), false);
                 }
-                
+
                 for (k, line) in last_credits.iter().enumerate() {
                     let y = 2 + layout.credits_height - last_credits.len() as u16 + k as u16;
                     let _ = move_cursor(layout.credits_pos_x, y);
@@ -268,7 +266,7 @@ pub fn start_credits(layout: TerminalLayout) {
                         let _ = print_at(&" ".repeat(padding), false);
                     }
                 }
-                
+
                 unsafe {
                     let _ = move_cursor(CURSOR_X, CURSOR_Y);
                 }
@@ -276,23 +274,23 @@ pub fn start_credits(layout: TerminalLayout) {
                 if let Some(last_line) = last_credits.last_mut() {
                     last_line.push(ch);
                 }
-                
+
                 unsafe {
                     if IS_DRAW_END {
                         break;
                     }
                 }
-                
+
                 let _ = move_cursor(layout.credits_pos_x + credit_x, layout.credits_height + 1);
                 let _ = print_at(&ch.to_string(), false);
-                
+
                 unsafe {
                     let _ = move_cursor(CURSOR_X, CURSOR_Y);
                 }
-                
+
                 credit_x += 1;
             }
-            
+
             // Wait until it's time for the next character
             while Instant::now() < current_time {
                 thread::sleep(Duration::from_millis(10));
