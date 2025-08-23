@@ -70,8 +70,7 @@ fn main() {
     let mut y = 0u16;
 
     while current_lyric < lyrics.len() && lyrics[current_lyric].mode != 9 {
-        let current_time = start_time.elapsed().as_millis() as u32 * 10; // Convert to centiseconds
-
+        let current_time = start_time.elapsed().as_millis() as u32 / 10;
         if current_time > lyrics[current_lyric].time {
             let lyric = &lyrics[current_lyric];
 
@@ -133,7 +132,7 @@ fn main() {
             current_lyric += 1;
         }
 
-        std::thread::sleep(Duration::from_millis(10));
+        std::thread::sleep(Duration::from_millis(1));
     }
 
     // Wait a bit before cleanup
