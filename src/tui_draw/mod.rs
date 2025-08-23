@@ -63,8 +63,8 @@ impl TerminalLayout {
         let lyric_width = columns - 4 - credits_width;
         let lyric_height = lines - 2;
         let credits_pos_x = lyric_width + 4;
-        let ascii_art_x = columns - ascii_art_width;
-        let ascii_art_y = lines - ascii_art_height;
+        let ascii_art_x = columns + 1 - ascii_art_width;
+        let ascii_art_y = lines + 1 - ascii_art_height;
 
         Self {
             credits_width,
