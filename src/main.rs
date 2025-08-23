@@ -2,6 +2,7 @@ use rodio::Decoder;
 use rodio::OutputStream;
 use rodio::Sink;
 use std::io::Cursor;
+use std::thread;
 use std::time::{Duration, Instant};
 
 mod data;
@@ -43,25 +44,6 @@ fn main() {
         return;
     }
 
-    // Play the background song
-    if let Ok((_stream, stream_handle)) = OutputStream::try_default() {
-        // Try to create a sink (audio output)
-        if let Ok(sink) = Sink::try_new(&stream_handle) {
-            // Wrap the bytes in a Cursor so Decoder can read them
-            let cursor = Cursor::new(MP3_DATA);
-            // Try to create a Decoder (audio source)
-            if let Ok(source) = Decoder::new(cursor) {
-                sink.append(source);
-                println!("Audio initialized successfully");
-            } else {
-                println!("Failed to decode MP3 data");
-            }
-        } else {
-            println!("Could not create audio sink, continuing without audio");
-        }
-    } else {
-        println!("No audio device available, continuing without audio");
-    }
     // Main lyrics processing loop
     let lyrics = get_lyrics();
     let start_time = Instant::now();
@@ -121,6 +103,7 @@ fn main() {
                 4 => {
                     // Start music (already started)
                     // println!("Music should start here");
+                    play_music_background(MP3_DATA);
                 }
                 5 => {
                     // Start credits
@@ -141,5 +124,16 @@ fn main() {
     // Cleanup
     if let Err(e) = end_draw() {
         eprintln!("Error cleaning up terminal: {}", e);
+    }
+
+    fn play_music_background(mp3_data: &'static [u8]) {
+        thread::spawn(move || {
+            let (_stream, stream_handle) = OutputStream::try_default().expect("No output device");
+            let sink = Sink::try_new(&stream_handle).expect("Failed to create Sink");
+            let cursor = Cursor::new(mp3_data);
+            let source = Decoder::new(cursor).expect("Failed to decode MP3 data");
+            sink.append(source);
+            sink.sleep_until_end(); // Keep the thread alive while music plays
+        });
     }
 }
