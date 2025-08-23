@@ -53,6 +53,9 @@ impl TerminalLayout {
     pub fn new() -> Self {
         let (columns, lines) = terminal::size().unwrap_or((80, 24));
 
+        if columns < 80 {
+            println!("This program required minimum 80 * 80 character array on your screen.");
+        }
         let ascii_art_width = 40;
         let ascii_art_height = 20;
         let credits_width = std::cmp::min((columns - 4) / 2, 56);
@@ -196,6 +199,7 @@ pub fn draw_lyrics(text: &str, x: u16, y: u16, interval: f32, newline: bool) -> 
     move_cursor(current_x + 2, y + 2)?;
 
     for ch in text.chars() {
+        move_cursor(current_x + 2, y + 2)?;
         print_at(&ch.to_string(), false)?;
         thread::sleep(Duration::from_secs_f32(interval));
         current_x += 1;
@@ -291,7 +295,6 @@ pub fn start_credits(layout: TerminalLayout) {
                 credit_x += 1;
             }
 
-            // Wait until it's time for the next character
             while Instant::now() < current_time {
                 thread::sleep(Duration::from_millis(10));
             }

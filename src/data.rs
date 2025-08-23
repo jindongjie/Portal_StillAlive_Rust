@@ -28,7 +28,7 @@ pub const ASCII_ART: &[&[&str]] = &[
         "         ,:+$+-,/H#MMMMMMM@= =,         ",
         "               =++%%%%+/:-.             ",
     ],
-    // a2  
+    // a2
     &[
         "             =+$HM####@H%;,             ",
         "          /H###############M$,          ",
@@ -270,7 +270,6 @@ pub fn get_lyrics() -> Vec<Lyric> {
         Lyric::new("0", 4903, 0.0, 2), // ASCII 1
         Lyric::new("For the people who are", 4973, -1.0, 0),
         Lyric::new("still alive.", 5110, 1.6, 1),
-
         // Page 2
         Lyric::new("", 5353, 0.0, 3), // Clear lyrics
         Lyric::new("Forms FORM-55551-5:", 5413, -1.0, 0),
@@ -305,7 +304,6 @@ pub fn get_lyrics() -> Vec<Lyric> {
         Lyric::new("0", 10120, 0.0, 2), // ASCII 1
         Lyric::new("For the people who are", 10190, -1.0, 0),
         Lyric::new("Still alive.", 10327, 1.8, 0),
-
         // Page 3
         Lyric::new("", 10603, 0.0, 3), // Clear lyrics
         Lyric::new("Forms FORM-55551-6:", 10663, -1.0, 0),
@@ -342,7 +340,6 @@ pub fn get_lyrics() -> Vec<Lyric> {
         Lyric::new("0", 15320, 0.0, 2), // ASCII 1
         Lyric::new("On the people who are", 15390, -1.0, 0),
         Lyric::new("still alive", 15553, 2.0, 1),
-
         // Page 4
         Lyric::new("", 15697, 0.0, 3), // Clear lyrics
         Lyric::new("", 15757, 0.05, 0),

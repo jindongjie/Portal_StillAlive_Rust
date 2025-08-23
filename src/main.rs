@@ -1,14 +1,12 @@
-use std::{
-    fs::File,
-    io::BufReader,
-    time::{Duration, Instant},
-};
+use rodio::Decoder;
+use std::fs::File;
+use std::io::BufReader;
+use std::time::{Duration, Instant};
 
 mod data;
 mod tui_draw;
 
 use data::get_lyrics;
-use rodio::Decoder;
 use tui_draw::{
     begin_draw, clear_lyrics, clear_screen, draw_ascii_art, draw_frame, draw_lyrics, end_draw,
     move_cursor, start_credits, TerminalLayout,
@@ -117,7 +115,7 @@ fn main() {
                 }
                 4 => {
                     // Start music (already started)
-                    println!("Music should start here");
+                    // println!("Music should start here");
                 }
                 5 => {
                     // Start credits
