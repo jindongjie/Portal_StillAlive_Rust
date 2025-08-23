@@ -52,7 +52,6 @@ fn main() {
             // Try to create a Decoder (audio source)
             if let Ok(source) = Decoder::new(cursor) {
                 sink.append(source);
-                sink.sleep_until_end();
                 println!("Audio initialized successfully");
             } else {
                 println!("Failed to decode MP3 data");
