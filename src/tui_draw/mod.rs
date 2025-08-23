@@ -53,8 +53,8 @@ impl TerminalLayout {
     pub fn new() -> Self {
         let (columns, lines) = terminal::size().unwrap_or((80, 24));
 
-        if columns < 80 {
-            println!("This program required minimum 80 * 80 character array on your screen.");
+        if columns < 80 && lines < 24 {
+            println!("This program required minimum 80 * 24 character array on your screen.");
         }
         let ascii_art_width = 40;
         let ascii_art_height = 20;
@@ -63,8 +63,8 @@ impl TerminalLayout {
         let lyric_width = columns - 4 - credits_width;
         let lyric_height = lines - 2;
         let credits_pos_x = lyric_width + 4;
-        let ascii_art_x = lyric_width + 4 + (credits_width - ascii_art_width) / 2;
-        let ascii_art_y = credits_height + 3;
+        let ascii_art_x = columns - ascii_art_width;
+        let ascii_art_y = lines - ascii_art_height;
 
         Self {
             credits_width,
