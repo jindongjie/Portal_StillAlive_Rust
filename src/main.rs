@@ -1,6 +1,7 @@
 use rodio::Decoder;
-use std::fs::File;
-use std::io::BufReader;
+use rodio::OutputStream;
+use rodio::Sink;
+use std::io::Cursor;
 use std::time::{Duration, Instant};
 
 mod data;
@@ -11,6 +12,7 @@ use tui_draw::{
     begin_draw, clear_lyrics, clear_screen, draw_ascii_art, draw_frame, draw_lyrics, end_draw,
     move_cursor, start_credits, TerminalLayout,
 };
+const MP3_DATA: &[u8] = include_bytes!("../music/ending.mp3");
 
 fn main() {
     // Set up Ctrl+C handler,able to quit program
@@ -42,20 +44,25 @@ fn main() {
     }
 
     // Play the background song
-    if let Ok((_stream, stream_handle)) = rodio::OutputStream::try_default() {
-        if let Ok(sink) = rodio::Sink::try_new(&stream_handle) {
-            sink.append(
-                Decoder::new(BufReader::new(File::open("music/ending.mp3").unwrap())).unwrap(),
-            );
-            sink.sleep_until_end();
-            println!("Audio initialized successfully");
+    if let Ok((_stream, stream_handle)) = OutputStream::try_default() {
+        // Try to create a sink (audio output)
+        if let Ok(sink) = Sink::try_new(&stream_handle) {
+            // Wrap the bytes in a Cursor so Decoder can read them
+            let cursor = Cursor::new(MP3_DATA);
+            // Try to create a Decoder (audio source)
+            if let Ok(source) = Decoder::new(cursor) {
+                sink.append(source);
+                sink.sleep_until_end();
+                println!("Audio initialized successfully");
+            } else {
+                println!("Failed to decode MP3 data");
+            }
         } else {
             println!("Could not create audio sink, continuing without audio");
         }
     } else {
         println!("No audio device available, continuing without audio");
     }
-
     // Main lyrics processing loop
     let lyrics = get_lyrics();
     let start_time = Instant::now();
