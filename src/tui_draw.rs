@@ -5,6 +5,7 @@ use crossterm::{
     ExecutableCommand,
 };
 use std::io::stdout;
+use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant};
 use std::{
@@ -18,12 +19,14 @@ use crate::data::{ASCII_ART, CREDITS};
 static mut IS_DRAW_END: bool = false;
 static mut CURSOR_X: u16 = 1;
 static mut CURSOR_Y: u16 = 1;
-static mut USEING_GLOBAL_LOCK: bool = false;
+
+static mut USEING_GLOBAL_LOCK: Mutex<bool> = Mutex::new(false);
 fn lock_ug() {
     loop {
         unsafe {
-            if USEING_GLOBAL_LOCK == false {
-                USEING_GLOBAL_LOCK = true;
+            let mut iner_lock = USEING_GLOBAL_LOCK.lock().unwrap();
+            if *iner_lock == false {
+                *iner_lock = true;
                 return;
             }
             thread::sleep(Duration::from_millis(1));
@@ -34,8 +37,9 @@ fn lock_ug() {
 fn unlock_ug() {
     loop {
         unsafe {
-            if USEING_GLOBAL_LOCK == true {
-                USEING_GLOBAL_LOCK = false;
+            let mut iner_lock = USEING_GLOBAL_LOCK.lock().unwrap();
+            if *iner_lock == true {
+                *iner_lock = false;
                 return;
             }
             thread::sleep(Duration::from_millis(1));
@@ -86,7 +90,7 @@ impl TerminalLayout {
         let ascii_art_height = 20;
         let credits_width = std::cmp::min(columns - 43, 56);
         let credits_height = lines - ascii_art_height - 2;
-        let lyric_width = columns - 4 - credits_width;
+        let lyric_width = columns - 8 - credits_width;
         let lyric_height = lines - 2;
         let credits_pos_x = lyric_width + 4;
         let ascii_art_x = lyric_width + 3;

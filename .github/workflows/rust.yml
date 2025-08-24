@@ -30,27 +30,7 @@ jobs:
             target: x86_64-unknown-linux-gnu
             asset_name: portal-still-alive-linux-x86_64
             cargo_features: --features audio
-          - os: ubuntu-latest
-            target: i686-unknown-linux-gnu
-            asset_name: portal-still-alive-linux-x86
-            cargo_features: --features audio
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            asset_name: portal-still-alive-linux-arm64
-            cargo_features: --features audio
-          - os: ubuntu-latest
-            target: armv7-unknown-linux-gnueabihf
-            asset_name: portal-still-alive-linux-armv7
-            cargo_features: --features audio
-          - os: ubuntu-latest
-            target: riscv64gc-unknown-linux-gnu
-            asset_name: portal-still-alive-linux-riscv64
-            cargo_features: --no-default-features
-          - os: ubuntu-latest
-            target: loongarch64-unknown-linux-gnu
-            asset_name: portal-still-alive-linux-loongarch64
-            cargo_features: --no-default-features
-
+       
           # Windows (disable ALSA)
           - os: windows-latest
             target: x86_64-pc-windows-msvc
@@ -75,16 +55,7 @@ jobs:
             asset_name: portal-still-alive-macos-arm64
             cargo_features: --no-default-features
 
-          # Generic Unix (musl, disable ALSA)
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            asset_name: portal-still-alive-unix-x86_64
-            cargo_features: --no-default-features
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-musl
-            asset_name: portal-still-alive-unix-arm64
-            cargo_features: --no-default-features
-
+        
     runs-on: ${{ matrix.os }}
 
     steps:

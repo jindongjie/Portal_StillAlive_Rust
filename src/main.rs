@@ -143,10 +143,6 @@ fn main() {
         thread::spawn(move || {
             let (_stream, stream_handle) = OutputStream::try_default().expect("No output device");
             Sink::try_new(&stream_handle).expect("Failed to create Sink1");
-        });
-        thread::spawn(move || {
-            let (_stream, stream_handle) = OutputStream::try_default().expect("No output device");
-            Sink::try_new(&stream_handle).expect("Failed to create Sink1");
             let sink = Sink::try_new(&stream_handle).expect("Failed to create Sink2");
             let cursor = Cursor::new(mp3_data);
             let source = Decoder::new(cursor).expect("Failed to decode MP3 data");
