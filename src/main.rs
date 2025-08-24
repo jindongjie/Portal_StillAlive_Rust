@@ -1,6 +1,7 @@
 use rodio::Decoder;
 use rodio::OutputStream;
 use rodio::Sink;
+use std::env;
 use std::io::Cursor;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -17,6 +18,16 @@ use tui_draw::{
 const MP3_CONSTANT: &[u8] = include_bytes!("../music/ending.mp3");
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.contains(&"-V".to_string()) || args.contains(&"--version".to_string()) {
+        println!("Portal_StillAlive_Rust 0.9.8");
+        return;
+    }
+
+    let mut no_music = false;
+    if args.contains(&"-M".to_string()) || args.contains(&"--mute-music".to_string()) {
+        no_music = true;
+    }
     ctrlc::set_handler(|| {
         let _ = tui_draw::end_draw();
         println!("Interrupt by user");
@@ -104,7 +115,9 @@ fn main() {
                     y = 0;
                 }
                 4 => {
-                    start_wonderful_music(MP3_CONSTANT);
+                    if !no_music {
+                        start_wonderful_music(MP3_CONSTANT);
+                    }
                 }
                 5 => {
                     start_credits(layout.clone());
@@ -127,6 +140,10 @@ fn main() {
     }
 
     fn start_wonderful_music(mp3_data: &'static [u8]) {
+        thread::spawn(move || {
+            let (_stream, stream_handle) = OutputStream::try_default().expect("No output device");
+            Sink::try_new(&stream_handle).expect("Failed to create Sink1");
+        });
         thread::spawn(move || {
             let (_stream, stream_handle) = OutputStream::try_default().expect("No output device");
             Sink::try_new(&stream_handle).expect("Failed to create Sink1");
