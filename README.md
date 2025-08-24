@@ -1,4 +1,4 @@
-### Portal_Still_Alive_Rust
+## Portal_Still_Alive_Rust
  - this TUI program is for recreate **final sence** (a Command-line User Interface with beautiful music playing~) of [Portal: Still Alive](https://theportalwiki.com).
  - single excutable program compile and distrobute by github CI,very simple to use and secure.
  - Compability for main-stream terminals (powershell/kitty/gnomeshell/etc)
@@ -18,7 +18,7 @@ You can manually compile it to any OS if Rust Programming Language support it, b
 | --mute-music       | -M    | Don't play music on background | none |
 
 ## How to use
-- Download the version of program fit your CPU architectrue and operating system on **github release**.
+- Download the version of program fit your CPU architectrue and operating system on [Github Release](https://github.com/jindongjie/Portal_StillAlive_Rust/releases).
 - run the excutable program on your terminal.
 - enjoy!
 
