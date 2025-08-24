@@ -13,10 +13,10 @@ use tui_draw::{
     begin_draw, clear_lyrics, clear_screen, draw_ascii_art, draw_frame, draw_lyrics, end_draw,
     move_cursor, start_credits, TerminalLayout,
 };
-const MP3_DATA: &[u8] = include_bytes!("../music/ending.mp3");
+
+const MP3_CONSTANT: &[u8] = include_bytes!("../music/ending.mp3");
 
 fn main() {
-    // Set up Ctrl+C handler,able to quit program
     ctrlc::set_handler(|| {
         let _ = tui_draw::end_draw();
         println!("Interrupt by user");
@@ -33,12 +33,13 @@ fn main() {
         return;
     }
 
-    // Clear screen and draw frame
+    // Clear screen
     if let Err(e) = clear_screen() {
         eprintln!("Error clearing screen: {}", e);
         return;
     }
 
+    // Draw frame
     if let Err(e) = draw_frame(&layout) {
         eprintln!("Error drawing frame: {}", e);
         return;
@@ -51,12 +52,14 @@ fn main() {
     let mut x = 0u16;
     let mut y = 0u16;
 
+    //Print out lyric line-by-line
     while current_lyric < lyrics.len() && lyrics[current_lyric].mode != 9 {
         let current_time = start_time.elapsed().as_millis() as u32 / 10;
+        //Each line of lyric have it own "timestamp", line will start printing again when "current_time" pass it
         if current_time > lyrics[current_lyric].time {
             let lyric = &lyrics[current_lyric];
 
-            // Calculate interval
+            // Calculate interval for each character
             let word_count = if lyric.mode <= 1 || lyric.mode >= 5 {
                 std::cmp::max(lyric.words.len(), 1)
             } else {
@@ -101,12 +104,9 @@ fn main() {
                     y = 0;
                 }
                 4 => {
-                    // Start music (already started)
-                    // println!("Music should start here");
-                    play_music_background(MP3_DATA);
+                    start_wonderful_music(MP3_CONSTANT);
                 }
                 5 => {
-                    // Start credits
                     start_credits(layout.clone());
                 }
                 _ => {}
@@ -126,14 +126,15 @@ fn main() {
         eprintln!("Error cleaning up terminal: {}", e);
     }
 
-    fn play_music_background(mp3_data: &'static [u8]) {
+    fn start_wonderful_music(mp3_data: &'static [u8]) {
         thread::spawn(move || {
             let (_stream, stream_handle) = OutputStream::try_default().expect("No output device");
-            let sink = Sink::try_new(&stream_handle).expect("Failed to create Sink");
+            Sink::try_new(&stream_handle).expect("Failed to create Sink1");
+            let sink = Sink::try_new(&stream_handle).expect("Failed to create Sink2");
             let cursor = Cursor::new(mp3_data);
             let source = Decoder::new(cursor).expect("Failed to decode MP3 data");
             sink.append(source);
-            sink.sleep_until_end(); // Keep the thread alive while music plays
+            sink.sleep_until_end(); // Keep the thread alive while music play
         });
     }
 }

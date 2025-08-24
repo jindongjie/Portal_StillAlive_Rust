@@ -1,16 +1,16 @@
-// tui_draw.rs
-// Handles TUI drawing and layout for Still Alive credits
-// All TUI/print/lyric/ascii/credit logic will be implemented here
-
 use crossterm::{
     cursor,
     style::{Color, Print, ResetColor, SetBackgroundColor, SetForegroundColor},
     terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
-use std::io::{self, Write};
+use std::io::stdout;
 use std::thread;
 use std::time::{Duration, Instant};
+use std::{
+    io::{self, Write},
+    process::exit,
+};
 
 use crate::data::{ASCII_ART, CREDITS};
 
@@ -18,6 +18,30 @@ use crate::data::{ASCII_ART, CREDITS};
 static mut IS_DRAW_END: bool = false;
 static mut CURSOR_X: u16 = 1;
 static mut CURSOR_Y: u16 = 1;
+static mut USEING_GLOBAL_LOCK: bool = false;
+fn lock_ug() {
+    loop {
+        unsafe {
+            if USEING_GLOBAL_LOCK == false {
+                USEING_GLOBAL_LOCK = true;
+                return;
+            }
+            thread::sleep(Duration::from_millis(1));
+        }
+    }
+}
+
+fn unlock_ug() {
+    loop {
+        unsafe {
+            if USEING_GLOBAL_LOCK == true {
+                USEING_GLOBAL_LOCK = false;
+                return;
+            }
+            thread::sleep(Duration::from_millis(1));
+        }
+    }
+}
 
 pub struct Lyric {
     pub words: String,
@@ -51,20 +75,22 @@ pub struct TerminalLayout {
 
 impl TerminalLayout {
     pub fn new() -> Self {
-        let (columns, lines) = terminal::size().unwrap_or((80, 24));
+        let (columns, lines) = terminal::size().unwrap();
 
-        if columns < 80 && lines < 24 {
-            println!("This program required minimum 80 * 24 character array on your screen.");
+        if columns < 80 || lines < 24 {
+            println!("Interrupt by user");
+            println!("This program required minimum 80 * 24 character array on your terminal.");
+            exit(0);
         }
-        let ascii_art_width = 40;
+        // let ascii_art_width = 40;
         let ascii_art_height = 20;
-        let credits_width = std::cmp::min((columns - 4) / 2, 56);
+        let credits_width = std::cmp::min(columns - 43, 56);
         let credits_height = lines - ascii_art_height - 2;
         let lyric_width = columns - 4 - credits_width;
         let lyric_height = lines - 2;
         let credits_pos_x = lyric_width + 4;
-        let ascii_art_x = columns + 1 - ascii_art_width;
-        let ascii_art_y = lines + 1 - ascii_art_height;
+        let ascii_art_x = lyric_width + 3;
+        let ascii_art_y = credits_height + 3;
 
         Self {
             credits_width,
@@ -89,7 +115,9 @@ pub fn begin_draw() -> io::Result<()> {
 
 pub fn end_draw() -> io::Result<()> {
     unsafe {
+        lock_ug();
         IS_DRAW_END = true;
+        unlock_ug();
     }
     let mut stdout = io::stdout();
     stdout.execute(ResetColor)?;
@@ -102,21 +130,25 @@ pub fn move_cursor(x: u16, y: u16) -> io::Result<()> {
     let mut stdout = io::stdout();
     stdout.execute(cursor::MoveTo(x - 1, y - 1))?;
     unsafe {
+        lock_ug();
         CURSOR_X = x;
         CURSOR_Y = y;
+        unlock_ug();
     }
     stdout.flush()?;
     Ok(())
 }
 
 pub fn clear_screen() -> io::Result<()> {
-    let mut stdout = io::stdout();
-    stdout.execute(Clear(ClearType::All))?;
+    // let mut stdout = io::stdout();
+    stdout().execute(Clear(ClearType::All))?;
     unsafe {
+        lock_ug();
         CURSOR_X = 1;
         CURSOR_Y = 1;
+        unlock_ug();
     }
-    stdout.flush()?;
+    stdout().flush()?;
     Ok(())
 }
 
@@ -126,13 +158,17 @@ pub fn print_at(text: &str, newline: bool) -> io::Result<()> {
         stdout.execute(Print(text))?;
         stdout.execute(Print("\n"))?;
         unsafe {
+            lock_ug();
             CURSOR_X = 1;
             CURSOR_Y += 1;
+            unlock_ug();
         }
     } else {
         stdout.execute(Print(text))?;
         unsafe {
+            lock_ug();
             CURSOR_X += text.len() as u16;
+            unlock_ug();
         }
     }
     stdout.flush()?;
@@ -250,9 +286,11 @@ pub fn start_credits(layout: TerminalLayout) {
                 }
 
                 unsafe {
+                    lock_ug();
                     if IS_DRAW_END {
                         break;
                     }
+                    unlock_ug();
                 }
 
                 // Clear and redraw credits area
@@ -280,9 +318,11 @@ pub fn start_credits(layout: TerminalLayout) {
                 }
 
                 unsafe {
+                    lock_ug();
                     if IS_DRAW_END {
                         break;
                     }
+                    unlock_ug();
                 }
 
                 let _ = move_cursor(layout.credits_pos_x + credit_x, layout.credits_height + 1);
