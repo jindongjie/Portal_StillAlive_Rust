@@ -21,7 +21,4 @@ You can manually compile it to any OS if Rust ProgramingLangurage support, and n
 - Download the version fit your CPU architectrue and operating system on github release.
 - run the excutable program on your terminal.
 
-![](https://github.com/errorer/Portal_StillAlive_Python/raw/master/still_alive_informer213.jpg)
-
-## Contribution
-This project need your contribution!
+![](pic/demo.jpg)
