@@ -25,60 +25,65 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Linux
+          # Linux (with ALSA support only for native Linux)
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             asset_name: portal-still-alive-linux-x86_64
+            cargo_features: --features audio
           - os: ubuntu-latest
             target: i686-unknown-linux-gnu
             asset_name: portal-still-alive-linux-x86
+            cargo_features: --features audio
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             asset_name: portal-still-alive-linux-arm64
+            cargo_features: --features audio
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
             asset_name: portal-still-alive-linux-armv7
+            cargo_features: --features audio
           - os: ubuntu-latest
             target: riscv64gc-unknown-linux-gnu
             asset_name: portal-still-alive-linux-riscv64
+            cargo_features: --no-default-features
           - os: ubuntu-latest
             target: loongarch64-unknown-linux-gnu
             asset_name: portal-still-alive-linux-loongarch64
+            cargo_features: --no-default-features
 
-          # Windows
+          # Windows (disable ALSA)
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             asset_name: portal-still-alive-windows-x86_64.exe
+            cargo_features: --no-default-features
           - os: windows-latest
             target: i686-pc-windows-msvc
             asset_name: portal-still-alive-windows-x86.exe
+            cargo_features: --no-default-features
           - os: windows-latest
             target: aarch64-pc-windows-msvc
             asset_name: portal-still-alive-windows-arm64.exe
+            cargo_features: --no-default-features
 
-          # macOS (Apple Silicon + Intel)
+          # macOS (disable ALSA)
           - os: macos-latest
             target: x86_64-apple-darwin
             asset_name: portal-still-alive-macos-x86_64
+            cargo_features: --no-default-features
           - os: macos-latest
             target: aarch64-apple-darwin
             asset_name: portal-still-alive-macos-arm64
+            cargo_features: --no-default-features
 
-          # FreeBSD (cross-compile)
-          - os: ubuntu-latest
-            target: x86_64-unknown-freebsd
-            asset_name: portal-still-alive-freebsd-x86_64
-          - os: ubuntu-latest
-            target: aarch64-unknown-freebsd
-            asset_name: portal-still-alive-freebsd-arm64
-
-          # Generic Unix (fallback)
+          # Generic Unix (musl, disable ALSA)
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             asset_name: portal-still-alive-unix-x86_64
+            cargo_features: --no-default-features
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
             asset_name: portal-still-alive-unix-arm64
+            cargo_features: --no-default-features
 
     runs-on: ${{ matrix.os }}
 
@@ -105,7 +110,7 @@ jobs:
       env:
         CARGO_BUILD_TARGET: ${{ matrix.target }}
       run: |
-        cargo build --release --target ${{ matrix.target }} --verbose
+        cargo build --release --target ${{ matrix.target }} --verbose ${{ matrix.cargo_features }}
 
     - name: Prepare binary
       shell: bash
